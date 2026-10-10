@@ -19,6 +19,10 @@ jobs:
   build-apk:
     name: Build APK
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/29.0.14206865
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -31,9 +35,6 @@ jobs:
           java-version: 21
           distribution: zulu
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Cache NDK
         uses: actions/cache@v4
         with:
@@ -41,15 +42,16 @@ jobs:
           key: ndk-29.0.14206865-${{ runner.os }}
 
       - name: Install NDK
-        run: sdkmanager "ndk;29.0.14206865"
+        run: |
+          if [ ! -x "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang" ]; then
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" "ndk;29.0.14206865"
+          fi
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build Release APK
-        run: |
-          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/29.0.14206865"
-          ./gradlew :app:assembleRelease --no-daemon
+        run: ./gradlew :app:assembleRelease --no-daemon
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v7
